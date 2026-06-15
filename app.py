@@ -3,13 +3,13 @@ import streamlit as st
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# --- CSS FINAL POUR UNIFORMITÉ TOTALE ---
+# --- CSS FINAL : UNIFICATION TOTALE ---
 st.markdown("""
     <style>
     /* 1. Fond global sombre */
     .stApp { background-color: #1a1a1a !important; }
     
-    /* 2. Masquer les éléments blancs par défaut */
+    /* 2. Suppression des zones blanches */
     header { background-color: transparent !important; }
     footer { visibility: hidden; }
     
@@ -21,7 +21,7 @@ st.markdown("""
         max-width: 260px !important;
     }
     
-    /* 4. Boutons gris fixes (pas de changement au survol) */
+    /* 4. Boutons */
     div.stButton > button { 
         background-color: #262626 !important; 
         color: white !important; 
@@ -30,29 +30,20 @@ st.markdown("""
     }
     div.stButton > button:hover {
         background-color: #262626 !important;
-        border: none !important;
-        color: white !important;
     }
 
-    /* 5. CORRECTION DE LA BARRE DE SAISIE (Suppression du blanc) */
+    /* 5. FIX FINAL : Suppression du blanc autour et dans la barre de saisie */
+    /* On cible le conteneur parent pour supprimer toute bordure blanche */
     .stChatInput { 
-        position: fixed; 
-        bottom: 50px; 
-        width: 60%; 
-        left: 20%; 
-        right: 20%;
+        background-color: #1a1a1a !important; 
+        padding-bottom: 20px !important;
     }
     
-    /* Force le fond de la zone de saisie en gris sombre */
+    /* On force le champ de saisie à avoir la même couleur que le fond */
     [data-testid="stChatInput"] { 
-        background-color: #262626 !important; 
+        background-color: #262626 !important;
         border: 1px solid #333 !important;
         border-radius: 25px !important;
-    }
-    
-    /* Change la couleur du texte à l'intérieur */
-    [data-testid="stChatInput"] textarea {
-        color: white !important;
     }
 
     .logo-box { background-color: #7b2cbf; color: white; width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; margin-right: 10px; font-weight: bold; }
