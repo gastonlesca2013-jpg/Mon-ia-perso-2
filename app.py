@@ -30,4 +30,3 @@ if user_input := st.chat_input("Pose-moi une question..."):
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
             st.error(f"Erreur : {e}")
-            
