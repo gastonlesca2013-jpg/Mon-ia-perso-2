@@ -1,77 +1,89 @@
 import streamlit as st
+import base64
+import requests
 
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# --- CSS FINAL : IDENTITÉ VISUELLE & ZÉRO BLANC ---
-st.markdown("""
+# --- FONCTION POUR CHARGER LE LOGO ---
+def get_image_as_base64(url):
+    try:
+        response = requests.get(url)
+        return base64.b64encode(response.content).decode()
+    except:
+        return ""
+
+# URL de votre logo
+logo_url = "https://images.unsplash.com/photo-1635322967697-380535593845?q=80&w=100&auto=format&fit=crop" # Remplacez par votre URL réelle si nécessaire
+logo_base64 = get_image_as_base64(logo_url)
+
+# --- CSS FINAL : LOGO FIXÉ + DESIGN ---
+st.markdown(f"""
     <style>
-    /* 1. FOND GLOBAL SOMBRE (ARRIÈRE-PLAN TEXTE) */
-    .stApp { background-color: #1a1a1a !important; }
+    .stApp {{ background-color: #1a1a1a !important; }}
+    footer {{ visibility: hidden; }}
     
-    /* 2. ÉLIMINATION TOTALE DU BLANC (HEADER & FOOTER) */
-    header { background-color: transparent !important; }
-    footer { visibility: hidden; }
-    
-    /* 3. BARRE LATÉRALE FIXE ET LOGO */
-    [data-testid="stSidebar"] { 
+    /* Barre latérale */
+    [data-testid="stSidebar"] {{ 
         background-color: #121212 !important; 
         border-right: 1px solid #333;
         min-width: 260px !important; 
         max-width: 260px !important;
-    }
+    }}
     
-    .sidebar-header {
+    /* En-tête avec logo */
+    .sidebar-header {{
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 15px;
+        padding: 10px;
         margin-bottom: 20px;
-    }
+    }}
     
-    .logo-img {
-        width: 35px;
-        height: 35px;
-        object-fit: contain;
-    }
+    .logo-img {{
+        width: 30px;
+        height: 30px;
+        border-radius: 5px;
+    }}
     
-    .brand-name {
+    .brand-name {{
         color: white;
-        font-size: 20px;
+        font-size: 22px;
         font-weight: bold;
-    }
+    }}
 
-    /* 4. BOUTONS FIXES (SANS EFFET NOIR AU SURVOL) */
-    div.stButton > button { 
-        background-color: #262626 !important; 
-        color: white !important; 
-        border: none !important;
-        text-align: left;
-    }
-    div.stButton > button:hover {
-        background-color: #262626 !important;
-        border: none !important;
-        color: white !important;
-    }
-
-    /* 5. ZONE DE SAISIE SOMBRE (SANS CARRÉ BLANC) */
-    [data-testid="stChatInputContainer"] { 
+    /* Fix zone saisie */
+    [data-testid="stChatInputContainer"] {{ 
         background-color: #1a1a1a !important;
-        border-top: none !important;
-    }
-    
-    [data-testid="stChatInput"] { 
+    }}
+    [data-testid="stChatInput"] {{ 
         background-color: #262626 !important;
         border: 1px solid #333 !important;
         border-radius: 25px !important;
-    }
-    
-    [data-testid="stChatInput"] textarea {
-        color: white !important;
-    }
+    }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- BARRE LATÉRALE (SIDEBAR) ---
+# --- SIDEBAR AVEC LOGO ---
 with st.sidebar:
-    # Intégration du logo fourni à gauche du nom
-    logo_url = "http://googleusercontent.com/image_collection/image_retrieval/11398957632741036184"
+    st.markdown(f"""
+        <div class='sidebar-header'>
+            <img src='data:image/png;base64,{logo_base64}' class='logo-img'>
+            <span class='brand-name'>Kalyx</span>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.button("➕ Nouvelle discussion", use_container_width=True)
+    st.button("📄 Nouveau notebook", use_container_width=True)
+    st.markdown("<br><p style='color: gray; font-size: 0.8em;'>Récents</p>", unsafe_allow_html=True)
+    st.button("• achat casquettes", use_container_width=True)
+    st.button("• bonjour", use_container_width=True)
+
+# --- CONTENU ---
+st.markdown("""
+    <div style="display: flex; justify-content: center; align-items: center; height: 75vh;">
+        <h2 style='color: white; font-weight: 400;'>De nouvelles idées à explorer ?</h2>
+    </div>
+""", unsafe_allow_html=True)
+
+prompt = st.chat_input("Demander à Kalyx...")
