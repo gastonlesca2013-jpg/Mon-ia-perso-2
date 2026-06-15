@@ -1,37 +1,35 @@
 import streamlit as st
 import google.generativeai as genai
 
-# Configuration de la page
+# 1. Configuration forcée du design (Texte blanc)
 st.set_page_config(page_title="Kalyx", page_icon="🤖")
-
-# --- DESIGN : Texte blanc forcé ---
 st.markdown("""
     <style>
     .stApp { background-color: #1a1a1a !important; }
-    div[data-testid="stMarkdownContainer"] { color: white !important; }
-    p, h1, h2, h3, div { color: white !important; }
-    .stChatInput { background-color: #333 !important; }
+    div[data-testid="stMarkdownContainer"], p, h1, h2, div { color: white !important; }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🤖 Kalyx est prêt")
+st.title("🤖 Kalyx - Assistant")
 
-# Configuration de l'IA
+# 2. Configuration de la clé API
+# Assurez-vous d'avoir ajouté GEMINI_API_KEY dans les Secrets Streamlit
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
-    st.error("ERREUR : La clé API 'GEMINI_API_KEY' n'est pas configurée dans les Secrets Streamlit.")
+    st.error("Ajoutez GEMINI_API_KEY dans les secrets Streamlit !")
     st.stop()
 
+# 3. Initialisation de la discussion
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Affichage des messages
+# Affichage de l'historique
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# Gestion de la question
+# 4. Gestion de la question
 if user_input := st.chat_input("Posez votre question..."):
     with st.chat_message("user"):
         st.markdown(user_input)
@@ -39,9 +37,10 @@ if user_input := st.chat_input("Posez votre question..."):
 
     with st.chat_message("assistant"):
         try:
-            model = genai.GenerativeModel("gemini-1.5-flash")
+            # Utilisation d'un modèle plus standard si le précédent échoue
+            model = genai.GenerativeModel("gemini-pro")
             response = model.generate_content(user_input)
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"Erreur technique : {e}")
+            st.error(f"Erreur : {e}")
