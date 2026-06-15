@@ -13,7 +13,6 @@ st.markdown("""
 st.title("🤖 Kalyx - Assistant")
 
 # 2. Configuration de la clé API
-# Assurez-vous d'avoir ajouté GEMINI_API_KEY dans les Secrets Streamlit
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -37,8 +36,8 @@ if user_input := st.chat_input("Posez votre question..."):
 
     with st.chat_message("assistant"):
         try:
-            # Utilisation d'un modèle plus standard si le précédent échoue
-            model = genai.GenerativeModel("gemini-pro")
+            # Utilisation du modèle flash standard
+            model = genai.GenerativeModel("gemini-1.5-flash")
             response = model.generate_content(user_input)
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
