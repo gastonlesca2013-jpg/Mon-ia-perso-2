@@ -106,4 +106,63 @@ st.markdown("""
         color: #fff;
         letter-spacing: 0.5px;
     }
-    </
+    </style>
+""", unsafe_allow_html=True)
+
+# --- GESTION DE L'ÉTAT (NAVIGATION DES DISCUSSIONS) ---
+if "current_chat" not in st.session_state:
+    st.session_state.current_chat = "Accueil"
+
+# Dictionnaire simulant le contenu de tes anciennes discussions
+chats_historique = {
+    "achat casquettes": "Voici l'historique de votre discussion concernant l'**achat de casquettes**...",
+    "bonjour": "Voici l'historique de votre discussion de bienvenue (**bonjour**)..."
+}
+
+# --- BARRE LATÉRALE (SIDEBAR GAUCHE) ---
+with st.sidebar:
+    # Logo personnalisé Kalyx en haut à gauche
+    st.markdown("""
+        <div class="logo-container">
+            <div class="logo-icon">K</div>
+            <div class="logo-text">Kalyx</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Boutons d'action principaux
+    if st.button("➕ Nouvelle discussion"):
+        st.session_state.current_chat = "Accueil"
+        st.rerun()
+        
+    if st.button("📝 Nouveau notebook"):
+        st.session_state.current_chat = "Notebook"
+        st.rerun()
+        
+    st.write("")
+    st.caption("Récents")
+    
+    # Section des éléments récents cliquables
+    for chat_title in chats_historique.keys():
+        if st.button(f"💬 {chat_title}", key=chat_title):
+            st.session_state.current_chat = chat_title
+            st.rerun()
+
+# --- ZONE CENTRALE (CONTENU PRINCIPAL) ---
+
+if st.session_state.current_chat == "Accueil":
+    st.markdown('<div class="welcome-text">De nouvelles idées à explorer ?</div>', unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 3, 1])
+    with col2:
+        user_input = st.chat_input("Demander à Kalyx...")
+        if user_input:
+            st.write(f"Vous avez dit : {user_input}")
+
+elif st.session_state.current_chat == "Notebook":
+    st.title("🗒️ Mode Notebook")
+    st.write("Espace de travail et de note.")
+
+else:
+    st.title(f"💬 {st.session_state.current_chat}")
+    st.write(chats_historique[st.session_state.current_chat])
+    st.chat_input("Continuer la discussion...")
