@@ -6,50 +6,55 @@ st.set_page_config(layout="wide", page_title="Kalyx")
 # --- CSS FINAL : UNIFICATION TOTALE ---
 st.markdown("""
     <style>
-    /* 1. Fond global sombre (force tout l'arrière-plan) */
+    /* 1. Fond global sombre */
     .stApp { background-color: #1a1a1a !important; }
     
-    /* 2. Suppression des zones blanches par défaut */
+    /* 2. Suppression des zones blanches */
     header { background-color: transparent !important; }
     footer { visibility: hidden; }
     
-    /* 3. Forcer le fond du conteneur Streamlit en gris sombre */
-    .block-container { 
-        background-color: #1a1a1a !important; 
-    }
-    
-    /* 4. FIX FINAL : Cible précisément la barre de saisie et son environnement */
-    /* On force la couleur de fond de tout le conteneur de saisie */
-    [data-testid="stChatInputContainer"] { 
-        background-color: #1a1a1a !important;
-        border-top: none !important;
-    }
-    
-    /* On force la couleur du champ lui-même */
-    [data-testid="stChatInput"] { 
-        background-color: #262626 !important;
-        border: 1px solid #333 !important;
-        border-radius: 25px !important;
-    }
-
-    /* 5. Barre latérale fixe */
+    /* 3. Barre latérale fixe */
     [data-testid="stSidebar"] { 
         background-color: #121212 !important; 
         border-right: 1px solid #333;
+        min-width: 260px !important; 
+        max-width: 260px !important;
     }
     
-    /* Boutons */
+    /* 4. Boutons */
     div.stButton > button { 
         background-color: #262626 !important; 
         color: white !important; 
         border: none !important;
+        text-align: left;
     }
+    div.stButton > button:hover {
+        background-color: #262626 !important;
+    }
+
+    /* 5. FIX FINAL : Suppression de la barre blanche en bas */
+    /* Cible le conteneur du chat pour forcer le fond sombre */
+    [data-testid="stChatInputContainer"] { 
+        background-color: #1a1a1a !important;
+        padding-top: 10px !important;
+    }
+    
+    /* Cible le champ de saisie lui-même */
+    [data-testid="stChatInput"] { 
+        background-color: #262626 !important;
+        border: 1px solid #333 !important;
+        border-radius: 25px !important;
+        color: white !important;
+    }
+
+    .logo-box { background-color: #7b2cbf; color: white; width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; margin-right: 10px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 🟪 Kalyx")
+    st.markdown("<div><span class='logo-box'>K</span> Kalyx</div>", unsafe_allow_html=True)
+    st.write("")
     st.button("➕ Nouvelle discussion", use_container_width=True)
     st.button("📄 Nouveau notebook", use_container_width=True)
     st.markdown("<br><p style='color: gray; font-size: 0.8em;'>Récents</p>", unsafe_allow_html=True)
