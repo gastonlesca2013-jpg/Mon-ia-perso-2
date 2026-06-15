@@ -1,8 +1,8 @@
 import streamlit as st
 import google.generativeai as genai
 
-st.set_page_config(page_title="Mon IA Perso", page_icon="🤖")
-st.title("🤖 Mon IA Super Efficace")
+st.set_page_config(page_title="Kalyx", page_icon="")
+st.title("kalyx")
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
