@@ -1,77 +1,65 @@
 import streamlit as st
 import base64
-import requests
 
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# --- FONCTION POUR CHARGER LE LOGO ---
-def get_image_as_base64(url):
-    try:
-        response = requests.get(url)
-        return base64.b64encode(response.content).decode()
-    except:
-        return ""
-
-# URL de votre logo
-logo_url = "https://images.unsplash.com/photo-1635322967697-380535593845?q=80&w=100&auto=format&fit=crop" # Remplacez par votre URL réelle si nécessaire
-logo_base64 = get_image_as_base64(logo_url)
-
-# --- CSS FINAL : LOGO FIXÉ + DESIGN ---
-st.markdown(f"""
+# --- CSS POUR UNIFORMISER LE NOIR/GRIS SOMBRE ---
+st.markdown("""
     <style>
-    .stApp {{ background-color: #1a1a1a !important; }}
-    footer {{ visibility: hidden; }}
+    /* 1. Fond global de l'application */
+    .stApp { background-color: #1a1a1a !important; }
     
-    /* Barre latérale */
-    [data-testid="stSidebar"] {{ 
+    /* 2. Suppression des zones blanches en haut et en bas */
+    header { background-color: #1a1a1a !important; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
+    
+    /* 3. Sidebar : Fond fixe et suppression de l'effet de survol */
+    [data-testid="stSidebar"] { 
         background-color: #121212 !important; 
         border-right: 1px solid #333;
-        min-width: 260px !important; 
-        max-width: 260px !important;
-    }}
+    }
     
-    /* En-tête avec logo */
-    .sidebar-header {{
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        padding: 10px;
-        margin-bottom: 20px;
-    }}
+    /* Force les boutons à rester gris foncé et empêche le changement de couleur au survol */
+    div.stButton > button { 
+        background-color: #262626 !important; 
+        color: white !important; 
+        border: none !important;
+        transition: none !important;
+    }
     
-    .logo-img {{
-        width: 30px;
-        height: 30px;
-        border-radius: 5px;
-    }}
+    div.stButton > button:hover {
+        background-color: #262626 !important; /* Maintient la même couleur */
+        border: none !important;
+        color: white !important;
+    }
     
-    .brand-name {{
-        color: white;
-        font-size: 22px;
-        font-weight: bold;
-    }}
-
-    /* Fix zone saisie */
-    [data-testid="stChatInputContainer"] {{ 
+    /* 4. Barre de saisie : Suppression du blanc */
+    div[data-testid="stChatInputContainer"] {
         background-color: #1a1a1a !important;
-    }}
-    [data-testid="stChatInput"] {{ 
+        border-top: none !important;
+    }
+    
+    [data-testid="stChatInput"] { 
         background-color: #262626 !important;
         border: 1px solid #333 !important;
-        border-radius: 25px !important;
-    }}
+        color: white !important;
+    }
+    
+    /* Texte dans la zone de saisie */
+    textarea { color: white !important; }
+    
+    /* Titre central */
+    h2 { color: white !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # --- SIDEBAR AVEC LOGO ---
 with st.sidebar:
-    st.markdown(f"""
-        <div class='sidebar-header'>
-            <img src='data:image/png;base64,{logo_base64}' class='logo-img'>
-            <span class='brand-name'>Kalyx</span>
-        </div>
-    """, unsafe_allow_html=True)
+    # Ajustez le chemin de votre logo si nécessaire
+    st.image("image_8281ff.jpg", width=40) 
+    st.write("### Kalyx")
     
     st.button("➕ Nouvelle discussion", use_container_width=True)
     st.button("📄 Nouveau notebook", use_container_width=True)
@@ -79,11 +67,12 @@ with st.sidebar:
     st.button("• achat casquettes", use_container_width=True)
     st.button("• bonjour", use_container_width=True)
 
-# --- CONTENU ---
+# --- CONTENU PRINCIPAL ---
 st.markdown("""
-    <div style="display: flex; justify-content: center; align-items: center; height: 75vh;">
-        <h2 style='color: white; font-weight: 400;'>De nouvelles idées à explorer ?</h2>
+    <div style="display: flex; justify-content: center; align-items: center; height: 70vh;">
+        <h2>De nouvelles idées à explorer ?</h2>
     </div>
 """, unsafe_allow_html=True)
 
+# Barre de saisie
 prompt = st.chat_input("Demander à Kalyx...")
