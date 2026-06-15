@@ -3,17 +3,13 @@ import streamlit as st
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# --- CSS FINAL : UNIFICATION TOTALE ---
+# --- CSS FINAL : FORCE LE NOIR SUR TOUT LE BAS ---
 st.markdown("""
     <style>
-    /* 1. Fond global sombre */
+    /* Fond principal */
     .stApp { background-color: #1a1a1a !important; }
     
-    /* 2. Suppression des zones blanches */
-    header { background-color: transparent !important; }
-    footer { visibility: hidden; }
-    
-    /* 3. Barre latérale fixe */
+    /* Barre latérale */
     [data-testid="stSidebar"] { 
         background-color: #121212 !important; 
         border-right: 1px solid #333;
@@ -21,31 +17,28 @@ st.markdown("""
         max-width: 260px !important;
     }
     
-    /* 4. Boutons */
-    div.stButton > button { 
-        background-color: #262626 !important; 
-        color: white !important; 
+    /* Supprime les marges blanches autour du chat_input */
+    footer { visibility: hidden; }
+    
+    /* CIBLE LA ZONE BLANCHE SOUS LA BARRE DE RECHERCHE */
+    div[data-testid="stChatInputContainer"] {
+        background-color: #1a1a1a !important;
         border: none !important;
-        text-align: left;
-    }
-    div.stButton > button:hover {
-        background-color: #262626 !important;
     }
 
-    /* 5. FIX FINAL : Suppression de la barre blanche en bas */
-    /* Cible le conteneur du chat pour forcer le fond sombre */
-    [data-testid="stChatInputContainer"] { 
-        background-color: #1a1a1a !important;
-        padding-top: 10px !important;
-    }
-    
-    /* Cible le champ de saisie lui-même */
+    /* CIBLE LA BARRE DE RECHERCHE ELLE-MÊME */
     [data-testid="stChatInput"] { 
         background-color: #262626 !important;
         border: 1px solid #333 !important;
         border-radius: 25px !important;
-        color: white !important;
     }
+    
+    /* Couleur du texte de saisie */
+    [data-testid="stChatInput"] textarea { color: white !important; }
+
+    /* Boutons sidebar */
+    div.stButton > button { background-color: #262626 !important; color: white !important; border: none !important; text-align: left; }
+    div.stButton > button:hover { background-color: #262626 !important; }
 
     .logo-box { background-color: #7b2cbf; color: white; width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; margin-right: 10px; font-weight: bold; }
     </style>
@@ -63,10 +56,11 @@ with st.sidebar:
 
 # --- CONTENU ---
 st.markdown("""
-    <div style="display: flex; justify-content: center; align-items: center; height: 70vh;">
+    <div style="display: flex; justify-content: center; align-items: center; height: 75vh;">
         <h2 style='color: white; font-weight: 400;'>De nouvelles idées à explorer ?</h2>
     </div>
 """, unsafe_allow_html=True)
 
-# Barre de saisie
+# --- BARRE DE SAISIE ---
+# On place le chat_input dans un conteneur qui est forcé en noir par le CSS ci-dessus
 prompt = st.chat_input("Demander à Kalyx...")
