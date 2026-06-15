@@ -3,20 +3,17 @@ import streamlit as st
 # Configuration de la page
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# --- CSS CORRIGÉ POUR UNIFIER TOUT L'ARRIÈRE-PLAN ---
+# --- CSS FINAL POUR UNIFORMITÉ TOTALE ---
 st.markdown("""
     <style>
-    /* 1. Forcer le fond de toute l'application en gris très foncé */
-    .stApp { 
-        background-color: #1a1a1a !important; 
-    }
+    /* 1. Fond global sombre */
+    .stApp { background-color: #1a1a1a !important; }
     
-    /* 2. Éliminer les zones blanches en haut et en bas */
+    /* 2. Masquer les éléments blancs par défaut */
     header { background-color: transparent !important; }
-    #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
     
-    /* 3. Barre latérale fixe (non redimensionnable) */
+    /* 3. Barre latérale fixe */
     [data-testid="stSidebar"] { 
         background-color: #121212 !important; 
         border-right: 1px solid #333;
@@ -24,7 +21,7 @@ st.markdown("""
         max-width: 260px !important;
     }
     
-    /* 4. Style des boutons sans changement de couleur au survol */
+    /* 4. Boutons gris fixes (pas de changement au survol) */
     div.stButton > button { 
         background-color: #262626 !important; 
         color: white !important; 
@@ -37,7 +34,7 @@ st.markdown("""
         color: white !important;
     }
 
-    /* 5. Barre de saisie (Chat Input) */
+    /* 5. CORRECTION DE LA BARRE DE SAISIE (Suppression du blanc) */
     .stChatInput { 
         position: fixed; 
         bottom: 50px; 
@@ -46,13 +43,18 @@ st.markdown("""
         right: 20%;
     }
     
-    /* Le fond du chat input lui-même */
+    /* Force le fond de la zone de saisie en gris sombre */
     [data-testid="stChatInput"] { 
         background-color: #262626 !important; 
-        border: none !important;
+        border: 1px solid #333 !important;
+        border-radius: 25px !important;
+    }
+    
+    /* Change la couleur du texte à l'intérieur */
+    [data-testid="stChatInput"] textarea {
+        color: white !important;
     }
 
-    /* Logo K */
     .logo-box { background-color: #7b2cbf; color: white; width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; margin-right: 10px; font-weight: bold; }
     </style>
 """, unsafe_allow_html=True)
@@ -67,7 +69,7 @@ with st.sidebar:
     st.button("• achat casquettes", use_container_width=True)
     st.button("• bonjour", use_container_width=True)
 
-# --- CONTENU PRINCIPAL ---
+# --- CONTENU ---
 st.markdown("""
     <div style="display: flex; justify-content: center; align-items: center; height: 80vh;">
         <h2 style='color: white; font-weight: 400;'>De nouvelles idées à explorer ?</h2>
