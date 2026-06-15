@@ -1,9 +1,10 @@
 import streamlit as st
 from openai import OpenAI
 
+# Configuration
 st.set_page_config(layout="wide", page_title="Kalyx")
 
-# CSS pour le design sombre
+# --- CSS (Design sobre et sombre) ---
 st.markdown("""
     <style>
     .stApp { background-color: #1a1a1a !important; }
@@ -21,18 +22,18 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# Initialisation
+# Initialisation de l'IA
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Vérification de la clé API
-if "OPENAI_API_KEY" not in st.secrets:
-    st.error("Erreur : OPENAI_API_KEY non trouvée dans les paramètres Secrets.")
+# Tentative de connexion
+try:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+except:
+    st.error("Clé API introuvable dans les secrets.")
     st.stop()
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-
-# Affichage historique
+# Affichage des messages
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
@@ -44,13 +45,13 @@ if prompt := st.chat_input("Demander à Kalyx..."):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner('Kalyx réfléchit...'):
+        with st.spinner('Kalyx cherche la réponse...'):
             try:
                 response = client.chat.completions.create(
                     model="gpt-4o",
-                    messages=st.session_state.messages
+                    messages=[{"role": "m", "content": m["content"]} for m in st.session_state.messages]
                 ).choices[0].message.content
                 st.markdown(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
             except Exception as e:
-                st.error(f"Erreur API : {e}")
+                st.error(f"Erreur technique : {e}")
