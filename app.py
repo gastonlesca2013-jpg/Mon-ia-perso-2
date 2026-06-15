@@ -1,5 +1,14 @@
+import os
+import sys
+
+# Lignes magiques pour installer la bibliothèque Google automatiquement
+try:
+    import google.generativeai as genai
+except ImportError:
+    os.system(f"{sys.executable} -m pip install google-generativeai")
+    import google.generativeai as genai
+
 import streamlit as st
-import google.generativeai as genai
 
 st.set_page_config(page_title="Mon IA Perso", page_icon="🤖")
 st.title("🤖 Mon IA Super Efficace")
