@@ -2,17 +2,44 @@ import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
 
-# Configuration
-st.set_page_config(page_title="Kalyx", page_icon="🌴", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="Kalyx AI", page_icon="🌴", layout="wide")
 
-# CSS : Fond d'écran + Animation cercle (1mm) + Ajustement inputs
-bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1353&q=80"
+# --- INITIALISATION DES VARIABLES ---
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "messages" not in st.session_state: st.session_state.messages = []
+if "show_right_bar" not in st.session_state: st.session_state.show_right_bar = True
+if "bg_mode" not in st.session_state: st.session_state.bg_mode = "normal"
+
+# Liens des images
+LOGO_URL = "https://storage.googleapis.com/generate-images-v1/image_collection/image_retrieval/1247963246369165313"
+BG_TROPICAL = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1353&q=80"
+BG_JUL = "https://static.skyrock.fm/static/0.skyrock.fm/art/pic.99965315.2.jpg" # Image de Jul
+
+# --- 1. PORTAIL DE CONNEXION AVEC LOGO ---
+if not st.session_state.logged_in:
+    col1, col2 = st.columns([1, 4])
+    with col1:
+        st.image(LOGO_URL, width=80)
+    with col2:
+        st.title("Kalyx - Connexion")
+    
+    email = st.text_input("Adresse Email")
+    password = st.text_input("Mot de passe", type="password")
+    if st.button("Se connecter / S'inscrire"):
+        if email and password:
+            st.session_state.logged_in = True
+            st.rerun()
+    st.stop()
+
+# --- 2. STYLE ET FOND D'ÉCRAN ---
+current_bg = BG_TROPICAL if st.session_state.bg_mode == "normal" else BG_JUL
 
 st.markdown(f"""
     <style>
-    .stApp {{ background: url("{bg_url}"); background-size: cover; background-attachment: fixed; }}
+    .stApp {{ background: url("{current_bg}"); background-size: cover; background-attachment: fixed; }}
     
-    /* Animation du cercle (très petit) */
+    /* Animation du cercle (1mm) */
     .breathing-circle {{
         width: 6px; height: 6px;
         background-color: #00ffcc;
@@ -28,80 +55,86 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- INITIALISATION ---
-if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "messages" not in st.session_state: st.session_state.messages = []
-if "show_right_bar" not in st.session_state: st.session_state.show_right_bar = True
-
-# --- LOGIN ---
-if not st.session_state.logged_in:
-    st.title("🔒 Connexion à Kalyx")
-    email = st.text_input("Adresse Email")
-    password = st.text_input("Mot de passe", type="password")
-    if st.button("Se connecter"):
-        if email and password:
-            st.session_state.logged_in = True
-            st.rerun()
-    st.stop()
-
-# --- SIDEBAR GAUCHE ---
+# --- 3. BARRE DE TÂCHE GAUCHE (Logo + Kalyx + Récent) ---
 with st.sidebar:
-    st.title("Menu Kalyx")
-    if st.button("➕ Nouvelle Discussion"):
+    # Logo et Nom en haut à gauche
+    col_l1, col_l2 = st.columns([1, 3])
+    with col_l1:
+        st.image(LOGO_URL, width=40)
+    with col_l2:
+        st.markdown("### Kalyx")
+    
+    st.divider()
+    
+    if st.button("➕ Nouvelle Discussion", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-    st.button("🖼️ Générer Image")
+    
+    st.divider()
+    
+    # SECTION RÉCENT (Historique)
+    st.subheader("🕒 Récent")
+    if not st.session_state.messages:
+        st.write("Aucun historique")
+    else:
+        # Affiche les 5 dernières questions posées
+        recent_queries = [m["content"] for m in st.session_state.messages if m["role"] == "user"]
+        for q in recent_queries[-5:]:
+            st.info(f"{q[:20]}...")
 
-# --- GESTION MISE EN PAGE ET BOUTON TOGGLE ---
-# Si on veut la barre à droite
+# --- 4. GESTION DES COLONNES ---
 if st.session_state.show_right_bar:
     col_main, col_right = st.columns([3, 1])
 else:
     col_main = st.columns([1])[0]
     col_right = None
 
-# --- CONTENU PRINCIPAL ---
+# --- 5. CONTENU PRINCIPAL (CHAT) ---
 with col_main:
-    # Bouton pour gérer la barre (à droite)
-    if not st.session_state.show_right_bar:
-        if st.button("⬅️ Ouvrir Infos"):
-            st.session_state.show_right_bar = True
-            st.rerun()
+    st.title("🤖 Monia AI")
     
-    st.title("🤖 Kalyx")
-    
-    # Historique
+    # Correction erreur 404 : Utilisation de gemini-1.5-flash
+    if "GEMINI_API_KEY" in st.secrets:
+        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+        model = genai.GenerativeModel("gemini-1.5-flash")
+    else:
+        st.error("Clé API manquante dans les Secrets.")
+        st.stop()
+
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Zone de saisie (sans micro)
-    user_input = st.chat_input("Posez votre question...")
-    
-    if user_input:
+    if user_input := st.chat_input("Posez votre question..."):
+        # COMMANDE BOOM (Changement fond Jul)
+        if "boom" in user_input.lower():
+            st.session_state.bg_mode = "jul" if st.session_state.bg_mode == "normal" else "normal"
+            st.rerun()
+
         st.session_state.messages.append({"role": "user", "content": user_input})
         with st.chat_message("user"):
             st.markdown(user_input)
         
         with st.chat_message("assistant"):
-            # Animation cercle
             st.markdown('<div class="breathing-circle"></div>', unsafe_allow_html=True)
-            
-            if "GEMINI_API_KEY" in st.secrets:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel("gemini-1.5-flash")
+            try:
                 response = model.generate_content(user_input)
                 st.markdown(response.text)
                 st.session_state.messages.append({"role": "assistant", "content": response.text})
-                st.rerun()
+            except Exception as e:
+                st.error(f"Erreur : {e}")
 
-# --- BARRE DROITE (INFOS) ---
+# --- 6. BARRE DE TÂCHE DROITE (Infos) ---
 if col_right:
     with col_right:
-        if st.button("➡️ Fermer Infos"):
+        if st.button("➡️ Fermer", use_container_width=True):
             st.session_state.show_right_bar = False
             st.rerun()
-        st.markdown("### 📅 Aujourd'hui")
-        st.write(f"**Date :** {datetime.now().strftime('%d/%m/%Y')}")
-        st.write(f"**Heure :** {datetime.now().strftime('%H:%M')}")
-        st.info("Système Kalyx opérationnel.")
+        st.markdown("### ℹ️ Infos")
+        st.write(f"Date : {datetime.now().strftime('%d/%m/%Y')}")
+        st.write("Statut : Connecté")
+else:
+    # Bouton discret pour rouvrir si fermée
+    if st.button("⬅️ Infos"):
+        st.session_state.show_right_bar = True
+        st.rerun()
