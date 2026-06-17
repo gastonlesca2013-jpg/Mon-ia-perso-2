@@ -1,87 +1,109 @@
 import streamlit as st
 import google.generativeai as genai
 from streamlit_mic_recorder import mic_recorder
+from datetime import datetime
 
-# Configuration de la page
-st.set_page_config(page_title="Kalyx", page_icon="🌴", layout="centered")
+# Configuration
+st.set_page_config(page_title="Kalyx", page_icon="🌴", layout="wide")
 
-# --- CSS POUR L'ANIMATION ET LA MISE EN PAGE ---
-st.markdown("""
+# CSS pour le fond d'écran et l'animation "cercle" (1mm = ~5px)
+bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1353&q=80"
+
+st.markdown(f"""
     <style>
-    /* Suppression des marges inutiles */
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    .stApp {{ background: url("{bg_url}"); background-size: cover; background-attachment: fixed; }}
     
-    /* Animation du cercle (10px = 1cm environ sur écran) */
-    .breathing-circle {
-        width: 10px; height: 10px;
+    /* Animation du cercle (très petit, ~1mm) */
+    .breathing-circle {{
+        width: 6px; height: 6px;
         background-color: #00ffcc;
         border-radius: 50%;
-        margin: 5px auto;
+        margin: 5px;
         animation: pulse 1.5s infinite ease-in-out;
-    }
-    @keyframes pulse {
-        0% { transform: scale(1); opacity: 0.5; }
-        50% { transform: scale(1.3); opacity: 1; }
-        100% { transform: scale(1); opacity: 0.5; }
-    }
+    }}
+    @keyframes pulse {{
+        0% {{ transform: scale(1); opacity: 0.5; }}
+        50% {{ transform: scale(1.3); opacity: 1; }}
+        100% {{ transform: scale(1); opacity: 0.5; }}
+    }}
     </style>
 """, unsafe_allow_html=True)
 
-# Initialisation
+# --- INITIALISATION ---
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
+if "show_right_bar" not in st.session_state: st.session_state.show_right_bar = True
 
-# --- SIDEBAR (BOUTONS) ---
+# --- LOGIN ---
+if not st.session_state.logged_in:
+    st.title("🔒 Connexion à Kalyx")
+    email = st.text_input("Adresse Email")
+    password = st.text_input("Mot de passe", type="password")
+    if st.button("Se connecter"):
+        if email and password:
+            st.session_state.logged_in = True
+            st.rerun()
+    st.stop()
+
+# --- SIDEBAR GAUCHE (MENU) ---
 with st.sidebar:
     st.title("Menu Kalyx")
     if st.button("➕ Nouvelle Discussion"):
         st.session_state.messages = []
         st.rerun()
     st.button("🖼️ Générer Image")
+    st.divider()
+    if st.button("↔️ Toggle Infos"):
+        st.session_state.show_right_bar = not st.session_state.show_right_bar
+        st.rerun()
 
-# --- CORPS DE L'APPLICATION ---
-st.title("🤖 Kalyx")
+# --- MISE EN PAGE PRINCIPALE ---
+if st.session_state.show_right_bar:
+    col_main, col_right = st.columns([3, 1])
+else:
+    col_main = st.columns([1])[0]
+    col_right = None
 
-# Affichage du chat
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# --- BARRE DE SAISIE + MICRO INTÉGRÉ ---
-# On utilise des colonnes pour aligner le micro et l'input
-c_mic, c_input = st.columns([0.1, 0.9])
-
-with c_mic:
-    # Micro discret
-    audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic', use_container_width=True)
-
-with c_input:
-    # Champ de saisie classique
-    user_input = st.chat_input("Posez votre question...")
-
-# Logique de réception du texte (Clavier ou Micro)
-final_input = None
-if audio_data and "text" in audio_data:
-    final_input = audio_data["text"]
-elif user_input:
-    final_input = user_input
-
-if final_input:
-    # Ajout du message utilisateur
-    st.session_state.messages.append({"role": "user", "content": final_input})
-    with st.chat_message("user"):
-        st.markdown(final_input)
+# --- CONTENU ---
+with col_main:
+    st.title("🤖 Kalyx")
     
-    # Affichage de l'animation pendant la réflexion
-    with st.chat_message("assistant"):
-        # Le cercle qui pulse
-        st.markdown('<div class="breathing-circle"></div>', unsafe_allow_html=True)
+    # Historique
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.markdown(message["content"])
+
+    # Zone de saisie + Micro
+    c_mic, c_input = st.columns([0.1, 0.9])
+    with c_mic:
+        audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic')
+    with c_input:
+        user_input = st.chat_input("Posez votre question...")
+
+    # Traitement
+    final_input = audio["text"] if audio and "text" in audio else user_input
+    
+    if final_input:
+        st.session_state.messages.append({"role": "user", "content": final_input})
+        with st.chat_message("user"):
+            st.markdown(final_input)
         
-        # Configuration API
-        if "GEMINI_API_KEY" in st.secrets:
-            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-            model = genai.GenerativeModel("gemini-1.5-flash")
+        with st.chat_message("assistant"):
+            # Animation cercle
+            st.markdown('<div class="breathing-circle"></div>', unsafe_allow_html=True)
             
-            response = model.generate_content(final_input)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-            st.rerun() # Pour rafraîchir et enlever le cercle
+            if "GEMINI_API_KEY" in st.secrets:
+                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(final_input)
+                st.markdown(response.text)
+                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                st.rerun()
+
+# --- BARRE DROITE (INFOS) ---
+if col_right:
+    with col_right:
+        st.markdown("### 📅 Aujourd'hui")
+        st.write(f"**Date :** {datetime.now().strftime('%d/%m/%Y')}")
+        st.write(f"**Heure :** {datetime.now().strftime('%H:%M')}")
+        st.info("Système Kalyx opérationnel.")
