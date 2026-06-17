@@ -4,21 +4,21 @@ import google.generativeai as genai
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Kalyx", layout="wide")
 
-# CSS POUR FORCE LE TEXTE BLANC ET LE STYLE
+# CSS POUR L'INTERFACE (FOND, COULEURS)
 st.markdown("""
     <style>
-    .stApp { color: white !important; }
-    div[data-testid="stMarkdownContainer"] p, h1, h2, h3, label { color: white !important; }
-    .stTextInput label { color: white !important; }
+    .stApp { background-color: #0e1117; color: white !important; }
+    h1, h2, h3, label { color: white !important; }
+    .sidebar .sidebar-content { background-color: #1a1a1a !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- INITIALISATION ---
+# --- INITIALISATION DES VARIABLES ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "page" not in st.session_state: st.session_state.page = "chat"
-# Historique global des logs (pour l'admin)
-if "user_logs" not in st.session_state: st.session_state.user_logs = []
+if "bg_url" not in st.session_state: st.session_state.bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
+if "logs" not in st.session_state: st.session_state.logs = [] # Pour voir ce que font les gens
 
 ADMIN_EMAIL = "gastonlesca2013@gmail.com"
 ADMIN_PWD = "Napoléon2013!"
@@ -28,7 +28,6 @@ if not st.session_state.logged_in:
     st.title("Connexion à Kalyx")
     email = st.text_input("Email")
     pwd = st.text_input("Mot de passe", type="password")
-    
     if st.button("Se connecter"):
         if email == ADMIN_EMAIL and pwd == ADMIN_PWD:
             st.session_state.logged_in = True
@@ -40,7 +39,7 @@ if not st.session_state.logged_in:
             st.rerun()
     st.stop()
 
-# --- SIDEBAR ---
+# --- SIDEBAR (BARRE DE NAVIGATION) ---
 with st.sidebar:
     st.title("Kalyx")
     if st.button("💬 Kalyx vous écoute"): st.session_state.page = "chat"; st.rerun()
@@ -48,55 +47,80 @@ with st.sidebar:
     if st.button("📊 Activité"): st.session_state.page = "activity"; st.rerun()
     if st.button("⚙️ Paramètres"): st.session_state.page = "settings"; st.rerun()
     
-    # Bouton Admin protégé
     if st.session_state.user_email == ADMIN_EMAIL:
         st.divider()
         if st.button("👑 Panneau Admin"): st.session_state.page = "admin"; st.rerun()
     
     st.divider()
-    if st.button("Déconnexion"): 
-        st.session_state.logged_in = False; st.rerun()
+    if st.button("Déconnexion"): st.session_state.logged_in = False; st.rerun()
 
-# --- PAGES ---
-if st.session_state.page == "chat":
-    st.header("Kalyx vous écoute")
-    
-    # Interface Chat
-    if prompt := st.chat_input("Votre message pour Kalyx..."):
-        # Enregistrer l'action pour l'admin
-        st.session_state.user_logs.append(f"{st.session_state.user_email} a demandé: {prompt}")
-        
-        st.chat_message("user").markdown(prompt)
-        
-        # Réponse IA
-        try:
-            # Assure-toi que la clé API est dans les Secrets Streamlit
-            model = genai.GenerativeModel("gemini-pro") 
-            response = model.generate_content(prompt)
-            st.chat_message("assistant").markdown(response.text)
-        except Exception as e:
-            st.error("Erreur de connexion à l'IA. Vérifiez votre clé API.")
+# --- LAYOUT PRINCIPAL (COLONNES POUR LA BARRE DE TÂCHE) ---
+main_col, side_col = st.columns([0.8, 0.2])
 
-elif st.session_state.page == "admin" and st.session_state.user_email == ADMIN_EMAIL:
-    st.header("👑 Panneau Admin")
-    st.info("Interface de supervision")
-    
-    # 1. Voir qui est connecté et ce qu'ils font
-    st.subheader("Journal d'activité des utilisateurs")
-    if not st.session_state.user_logs:
-        st.write("Aucune activité pour le moment.")
+with side_col:
+    st.markdown("### ℹ️ Infos Système")
+    st.write(f"Utilisateur : {st.session_state.user_email}")
+    st.write("Statut : Connecté")
+    st.write("Barre de tâches active.")
+
+with main_col:
+    # --- PAGE CHAT ---
+    if st.session_state.page == "chat":
+        st.header("Kalyx vous écoute")
+        prompt = st.chat_input("Dites quelque chose à Monia...")
+        
+        if prompt:
+            # Enregistrement du log pour l'admin
+            st.session_state.logs.append(f"{st.session_state.user_email} : {prompt}")
+            
+            # Commande BOOM
+            if "boom" in prompt.lower():
+                st.session_state.bg_url = "https://static.skyrock.fm/static/0.skyrock.fm/art/pic.99965315.2.jpg"
+                st.rerun()
+            
+            st.chat_message("user").markdown(prompt)
+            # Appel API (Vérifie bien tes secrets !)
+            try:
+                model = genai.GenerativeModel("gemini-1.5-flash")
+                response = model.generate_content(prompt)
+                st.chat_message("assistant").markdown(response.text)
+            except:
+                st.error("Monia ne répond pas. Vérifie ta clé API dans les secrets.")
+
+    # --- PAGE GÉNÉRATEUR IMAGE ---
+    elif st.session_state.page == "image":
+        st.header("🎨 Générateur d'Image")
+        img_prompt = st.text_input("Décris l'image que tu veux :")
+        if st.button("Générer maintenant"):
+            st.info(f"Génération de : {img_prompt}...")
+            st.image("https://via.placeholder.com/600x300?text=Kalyx+IA+Generation")
+
+    # --- PAGE ADMIN ---
+    elif st.session_state.page == "admin" and st.session_state.user_email == ADMIN_EMAIL:
+        st.header("👑 Panneau Administration (Total)")
+        
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            st.subheader("👥 Utilisateurs connectés")
+            st.write(f"1. {st.session_state.user_email} (Admin)")
+            
+        with col_b:
+            st.subheader("📡 Actions Admin")
+            if st.button("Supprimer les logs"): 
+                st.session_state.logs = []
+                st.rerun()
+
+        st.subheader("📜 Historique détaillé des activités")
+        for log in st.session_state.logs:
+            st.text(f"Action : {log}")
+
     else:
-        for log in st.session_state.user_logs:
-            st.text(f"• {log}")
+        st.write("Bienvenue sur Kalyx.")
 
-elif st.session_state.page == "activity":
-    st.header("📊 Activité")
-    st.write(f"Utilisateur actuel : {st.session_state.user_email}")
-    st.write("Tout fonctionne normalement.")
-
-elif st.session_state.page == "settings":
-    st.header("⚙️ Paramètres")
-    st.write(f"Connecté avec : {st.session_state.user_email}")
-
-else:
-    st.write("Bienvenue sur Kalyx.")
+# --- CSS FINAL (FOND D'ÉCRAN) ---
+st.markdown(f"""
+    <style>
+    .stApp {{ background: url("{st.session_state.bg_url}"); background-size: cover; background-attachment: fixed; }}
+    </style>
+""", unsafe_allow_html=True)
