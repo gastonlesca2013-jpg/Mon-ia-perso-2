@@ -2,117 +2,96 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
-import socket
+from PIL import Image
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Kalyx", layout="wide")
 
-# Fichier pour la persistance des données (pour que tout le monde voie la même chose)
+# Fichier pour la persistance (stockage local pour partager les infos)
 DATA_FILE = "broadcast_data.json"
+IMG_FILE = "shared_broadcast.png"
 
-def load_broadcast():
+def load_data():
     if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r") as f: return json.load(f)
-        except: return {"msg": None, "img": None, "canicule": False}
-    return {"msg": None, "img": None, "canicule": False}
+        with open(DATA_FILE, "r") as f: return json.load(f)
+    return {"msg": "", "canicule": False, "show_img": False}
 
-def save_broadcast(data):
+def save_data(data):
     with open(DATA_FILE, "w") as f: json.dump(data, f)
 
 # --- INITIALISATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "user_email" not in st.session_state: st.session_state.user_email = ""
-if "page" not in st.session_state: st.session_state.page = "Parler à Cadix"
+if "right_bar" not in st.session_state: st.session_state.right_bar = True
 
-# --- LOGIN ---
+# --- PAGE DE CONNEXION ---
 if not st.session_state.logged_in:
-    st.title("Connexion à Kalyx")
+    st.title("🔒 Connexion à Kalyx")
     email = st.text_input("Adresse Email")
-    pwd = st.text_input("Mot de passe", type="password")
-    if st.button("Se connecter"):
-        if email:
+    password = st.text_input("Mot de passe", type="password")
+    if st.button("Se connecter / S'inscrire"):
+        if email and password:
             st.session_state.logged_in = True
-            st.session_state.user_email = email
             st.rerun()
     st.stop()
 
 # --- SIDEBAR ---
 with st.sidebar:
     st.title("Kalyx")
-    if st.button("💬 Parler à Cadix"): st.session_state.page = "Parler à Cadix"
-    if st.button("🖼️ Générer Image"): st.session_state.page = "image"
-    if st.button("📊 Activité"): st.session_state.page = "activity"
-    if st.button("⚙️ Paramètres"): st.session_state.page = "settings"
-    
-    if st.session_state.user_email == "gastonlesca2013@gmail.com":
-        st.divider()
-        if st.button("👑 Panneau Admin"): st.session_state.page = "admin"
+    page = st.radio("Navigation", ["Parler à Calix", "Générer Image", "Activité", "Paramètres", "Panneau Admin"])
     st.divider()
     if st.button("Déconnexion"): st.session_state.logged_in = False; st.rerun()
 
-# --- LAYOUT DROITE (MÉTÉO) ---
-col_main, col_right = st.columns([0.8, 0.2])
+# --- LAYOUT PRINCIPAL ---
+# On gère la barre de droite rétractable
+col_main, col_right = st.columns([0.85 if st.session_state.right_bar else 1.0, 0.15 if st.session_state.right_bar else 0.01])
 
 with col_right:
-    st.write("### ☀️ Météo")
-    st.write("Aix-en-Provence: 28°C")
-    st.write("État: Ensoleillé")
+    if st.button("↔️"): st.session_state.right_bar = not st.session_state.right_bar; st.rerun()
+    if st.session_state.right_bar:
+        st.write("### ☀️ Météo")
+        st.write("Aix-en-Provence : 28°C")
 
-# --- CONTENU PRINCIPAL ---
 with col_main:
-    # Charger les infos broadcast
-    b_data = load_broadcast()
+    data = load_data()
     
-    # Affichage de l'alerte Canicule si activée par l'admin
-    if b_data.get("canicule"):
-        st.image("https://img.freepik.com/vecteurs-premium/soleil-mignon-transpirant-buvant-verre-eau_825852-52.jpg", 
-                 caption="ALERTE CANICULE ! Prenez soin de vous !")
+    # Alerte Canicule (Priorité haute)
+    if data.get("canicule"):
+        st.markdown("<h1 style='color:orange; text-align:center;'>🔥 ALERTE CANICULE !</h1>", unsafe_allow_html=True)
+        st.image("https://img.freepik.com/vecteurs-premium/soleil-mignon-transpirant-buvant-verre-eau_825852-52.jpg")
+        st.subheader("Hydratez-vous bien !")
     
-    # Affichage message standard
-    if b_data["msg"]: st.warning(f"📢 INFO: {b_data['msg']}")
+    # Affichage Image partagée Admin
+    if data.get("show_img") and os.path.exists(IMG_FILE):
+        st.image(IMG_FILE, caption="Message de l'Admin")
 
     # --- PAGES ---
-    if st.session_state.page == "Parler à Cadix":
-        st.header("Parler à Cadix")
+    if page == "Parler à Calix":
+        st.header("Parler à Calix")
         if prompt := st.chat_input("Votre message..."):
             st.chat_message("user").markdown(prompt)
-            try:
-                genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                model = genai.GenerativeModel("gemini-1.5-pro")
-                response = model.generate_content(prompt)
-                st.chat_message("assistant").markdown(response.text)
-            except: st.error("Erreur API. Vérifiez la clé dans les Secrets.")
+            # Logique IA ici...
+            st.chat_message("assistant").markdown("Bonjour ! Je suis Calix.")
 
-    elif st.session_state.page == "admin":
+    elif page == "Panneau Admin":
         st.header("👑 Panneau Admin")
-        new_msg = st.text_input("Message pour tous :")
-        if st.button("Diffuser Message"):
-            d = load_broadcast(); d["msg"] = new_msg; save_broadcast(d)
         
-        # Le bouton Canicule
+        # Upload Image pour tous
+        uploaded_file = st.file_uploader("Envoyer une photo à tous :", type=['png', 'jpg'])
+        if uploaded_file:
+            with open(IMG_FILE, "wb") as f: f.write(uploaded_file.getbuffer())
+            data["show_img"] = True; save_data(data)
+            st.success("Photo diffusée !")
+        
+        # Bouton Canicule
         if st.button("☀️ Activer Alerte Canicule"):
-            d = load_broadcast(); d["canicule"] = True; save_broadcast(d)
+            data["canicule"] = True; save_data(data); st.rerun()
             
-        if st.button("Tout réinitialiser (Canicule + Message)"):
-            save_broadcast({"msg": None, "img": None, "canicule": False})
+        if st.button("🛑 Tout réinitialiser"):
+            save_data({"msg": "", "canicule": False, "show_img": False})
+            if os.path.exists(IMG_FILE): os.remove(IMG_FILE)
+            st.rerun()
 
-    elif st.session_state.page == "image":
-        st.header("Générer Image")
-        query = st.text_input("Description :")
-        if st.button("Rechercher"):
-            st.image(f"https://image.pollinations.ai/prompt/{query}")
-
-    elif st.session_state.page == "activity":
-        st.header("Activité")
-        st.write("Nombre de connexions enregistrées : 1 (Admin)")
-
-    elif st.session_state.page == "settings":
-        st.header("Paramètres")
-        st.write(f"Email : {st.session_state.user_email}")
-        st.write(f"IP : {socket.gethostbyname(socket.gethostname())}")
-
-# --- FOND D'ÉCRAN ---
+# --- FOND D'ÉCRAN (FIXE) ---
 st.markdown("""
     <style>
     .stApp {
