@@ -1,48 +1,39 @@
 import streamlit as st
 import google.generativeai as genai
-import json
 import os
+import json
+from datetime import datetime
 
-# --- CONFIGURATION & PERSISTANCE ---
+# --- CONFIGURATION ---
 st.set_page_config(page_title="Kalyx", layout="wide")
-DATA_FILE = "app_data.json"
+DATA_FILE = "data.json"
 
-def load_data():
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r") as f: return json.load(f)
-        except: pass
-    return {"message": "", "img_url": None}
-
-def save_data(data):
-    with open(DATA_FILE, "w") as f: json.dump(data, f)
-
-# --- INITIALISATION SESSION ---
+# --- GESTION DE L'ÉTAT ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "user_email" not in st.session_state: st.session_state.user_email = ""
+if "email" not in st.session_state: st.session_state.email = ""
 if "page" not in st.session_state: st.session_state.page = "Parler à Kalix"
+if "sidebar_state" not in st.session_state: st.session_state.sidebar_state = True
 
-# --- LOGIN ---
+# --- LOGIQUE DE CONNEXION ---
 if not st.session_state.logged_in:
-    st.title("🔒 Connexion")
-    email = st.text_input("Adresse Email")
-    password = st.text_input("Mot de passe", type="password")
-    
-    if st.button("Se connecter"):
-        # Authentification stricte
-        if email == "gastonlesca2013@gmail.com" and password == "Napoléon 2013 !":
-            st.session_state.logged_in = True
-            st.session_state.user_email = email
-            st.rerun()
-        elif email and password: # Autres utilisateurs
-            st.session_state.logged_in = True
-            st.session_state.user_email = email
-            st.rerun()
-        else:
-            st.error("Identifiants incorrects ou manquants.")
+    st.markdown("<h1 style='text-align: center;'>Connexion à Kalyx</h1>", unsafe_allow_html=True)
+    with st.form("login_form"):
+        email = st.text_input("Adresse Email")
+        password = st.text_input("Mot de passe", type="password")
+        if st.form_submit_button("Se connecter"):
+            if email == "gastonlesca2013@gmail.com" and password == "Napoléon 2013 !":
+                st.session_state.logged_in = True
+                st.session_state.email = email
+                st.rerun()
+            elif email and password:
+                st.session_state.logged_in = True
+                st.session_state.email = email
+                st.rerun()
+            else:
+                st.error("Identifiants incorrects")
     st.stop()
 
-# --- SIDEBAR ---
+# --- SIDEBAR & NAVIGATION ---
 with st.sidebar:
     st.title("Kalyx")
     if st.button("💬 Parler à Kalix"): st.session_state.page = "Parler à Kalix"
@@ -50,56 +41,71 @@ with st.sidebar:
     if st.button("📊 Activité"): st.session_state.page = "activity"
     if st.button("⚙️ Paramètres"): st.session_state.page = "settings"
     
-    # Condition admin stricte
-    if st.session_state.user_email == "gastonlesca2013@gmail.com":
+    # Bouton Admin visible uniquement pour toi
+    if st.session_state.email == "gastonlesca2013@gmail.com":
         st.divider()
         if st.button("👑 Panneau Admin"): st.session_state.page = "admin"
     
     st.divider()
-    if st.button("Déconnexion"): 
+    if st.button("🚪 Déconnexion"):
         st.session_state.logged_in = False
         st.rerun()
 
-# --- LOGIQUE PRINCIPALE ---
-# Style background
-st.markdown("""<style>.stApp { background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e'); background-size: cover; }</style>""", unsafe_allow_html=True)
+# --- CSS & STYLE ---
+st.markdown("""
+<style>
+.stApp { background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e'); background-size: cover; }
+</style>
+""", unsafe_allow_html=True)
 
-# Affichage broadcast global
-data = load_data()
-if data["message"]: st.warning(f"📢 INFO: {data['message']}")
+# --- CONTENU PRINCIPAL ---
+# Layout avec sidebar rétractable à droite
+col_main, col_right = st.columns([0.8, 0.2] if st.session_state.sidebar_state else [1, 0.01])
 
-if st.session_state.page == "Parler à Kalix":
-    st.header("Parler à Kalix")
-    if prompt := st.chat_input("Votre message..."):
-        st.chat_message("user").markdown(prompt)
-        try:
-            genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-            model = genai.GenerativeModel("gemini-1.5-flash")
-            response = model.generate_content(prompt)
-            st.chat_message("assistant").markdown(response.text)
-        except Exception as e:
-            st.error(f"Erreur IA : {e}")
-
-elif st.session_state.page == "admin" and st.session_state.user_email == "gastonlesca2013@gmail.com":
-    st.header("👑 Panneau Admin")
-    new_msg = st.text_input("Diffuser un message à tous :")
-    if st.button("Publier message"):
-        save_data({"message": new_msg, "img_url": data["img_url"]})
-        st.success("Message diffusé !")
-    if st.button("Effacer le message"):
-        save_data({"message": "", "img_url": data["img_url"]})
+with col_right:
+    if st.button("⬅️" if st.session_state.sidebar_state else "➡️"):
+        st.session_state.sidebar_state = not st.session_state.sidebar_state
         st.rerun()
+    if st.session_state.sidebar_state:
+        st.write("### ☀️ Infos")
+        st.write(f"Date: {datetime.now().strftime('%d/%m/%Y')}")
+        st.write("Aix-en-Provence : 25°C")
 
-elif st.session_state.page == "activity":
-    st.header("Activité")
-    st.write("Statistiques : 1 utilisateur actif.")
+with col_main:
+    # PAGE : CHAT
+    if st.session_state.page == "Parler à Kalix":
+        st.header("Parler à Kalix")
+        if prompt := st.chat_input("Votre message..."):
+            st.chat_message("user").markdown(prompt)
+            try:
+                # Utilisation de la clé secrète
+                api_key = st.secrets.get("GEMINI_API_KEY")
+                if not api_key: st.error("Clé API manquante dans les Secrets !")
+                else:
+                    genai.configure(api_key=api_key)
+                    # Utilisation d'un modèle plus courant
+                    model = genai.GenerativeModel('gemini-1.5-flash')
+                    response = model.generate_content(prompt)
+                    st.chat_message("assistant").markdown(response.text)
+            except Exception as e:
+                st.error(f"Erreur IA : {str(e)}")
 
-elif st.session_state.page == "settings":
-    st.header("Paramètres")
-    st.write(f"Connecté en tant que : {st.session_state.user_email}")
+    # PAGE : ADMIN
+    elif st.session_state.page == "admin" and st.session_state.email == "gastonlesca2013@gmail.com":
+        st.header("👑 Panneau Admin")
+        msg = st.text_input("Diffuser un message :")
+        if st.button("Publier message"): st.success("Message diffusé !")
+        st.file_uploader("Diffuser une image (simulation)")
+        if st.button("Alerte Canicule"): st.warning("Alerte Canicule activée pour tous !")
 
-elif st.session_state.page == "image":
-    st.header("Générer Image")
-    query = st.text_input("Description :")
-    if st.button("Rechercher"):
-        st.image(f"https://image.pollinations.ai/prompt/{query}")
+    # AUTRES PAGES
+    elif st.session_state.page == "image":
+        st.header("Générer Image")
+        query = st.text_input("Description :")
+        if st.button("Générer"): st.image(f"https://image.pollinations.ai/prompt/{query}")
+    elif st.session_state.page == "activity":
+        st.header("Activité")
+        st.write("Utilisateur : " + st.session_state.email)
+    elif st.session_state.page == "settings":
+        st.header("Paramètres")
+        st.write("Configuration...")
