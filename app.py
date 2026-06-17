@@ -1,104 +1,115 @@
 import streamlit as st
-import google.generativeai as genai
 from datetime import datetime
 
-# --- CONFIGURATION PAGE ---
+# Configuration de la page
 st.set_page_config(page_title="Kalyx", layout="wide")
 
 # --- INITIALISATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
-if "messages" not in st.session_state: st.session_state.messages = []
-if "bg_url" not in st.session_state: st.session_state.bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
+if "page" not in st.session_state: st.session_state.page = "chat"
 if "show_right_bar" not in st.session_state: st.session_state.show_right_bar = True
+if "is_pro" not in st.session_state: st.session_state.is_pro = False
+if "chat_count" not in st.session_state: st.session_state.chat_count = 0
+if "img_count" not in st.session_state: st.session_state.img_count = 0
+if "bg_mode" not in st.session_state: st.session_state.bg_mode = "default"
 
-# --- LOGOS ET CONFIG (REMPLACEZ CES LIENS) ---
-LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
+# URLS (Remplacez par vos images hébergées)
+LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 
-# --- CSS POUR FOND D'ÉCRAN ---
-st.markdown(f"""
+# CSS
+st.markdown("""
     <style>
-    .stApp {{ background: url("{st.session_state.bg_url}"); background-size: cover; background-attachment: fixed; }}
-    [data-testid="stSidebar"] {{ background-color: rgba(20, 20, 20, 0.9); }}
+    .stApp { background: url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e"); background-size: cover; }
+    [data-testid="stSidebar"] { background-color: rgba(0,0,0,0.8) !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- PAGE DE CONNEXION ---
+# --- LOGIN ---
 if not st.session_state.logged_in:
-    col_l, col_r = st.columns([1, 2])
-    with col_l:
-        st.image(LOGO_URL, width=150)
-    with col_r:
-        st.title("Connexion Kalyx")
-        email = st.text_input("Adresse Email")
-        pwd = st.text_input("Mot de passe", type="password")
-        if st.button("Se connecter"):
-            if email and pwd:
-                st.session_state.logged_in = True
-                st.rerun()
+    st.image(LOGO_URL, width=100)
+    st.title("Connexion à Kalyx")
+    email = st.text_input("Email")
+    pwd = st.text_input("Mot de passe", type="password")
+    if st.button("Connexion"):
+        st.session_state.logged_in = True
+        st.rerun()
     st.stop()
 
 # --- SIDEBAR GAUCHE ---
 with st.sidebar:
     st.image(LOGO_URL, width=50)
-    st.title("Kalyx")
+    st.markdown("### Kalyx")
     if st.button("➕ Nouvelle Discussion"):
-        st.session_state.messages = []
+        st.session_state.page = "chat"
         st.rerun()
-    st.text_input("🔍 Rechercher...")
+    if st.button("🎨 Générer une image"):
+        st.session_state.page = "image_gen"
+    if st.button("📊 Activité"):
+        st.session_state.page = "activity"
+    if st.button("⚙️ Paramètres"):
+        st.session_state.page = "settings"
     st.divider()
-    st.button("🖼️ Bibliothèque d'images")
-    st.button("📊 Activité")
-    st.button("⚙️ Paramètres")
-    st.write("👤 Profil")
-    if st.button("Afficher/Masquer Infos"):
+    if st.button("👁️ Infos (Basculer)"):
         st.session_state.show_right_bar = not st.session_state.show_right_bar
         st.rerun()
 
-# --- LAYOUT PRINCIPAL ---
-if st.session_state.show_right_bar:
-    col_main, col_right = st.columns([4, 1])
-else:
-    col_main = st.container()
-    col_right = None
-
-with col_main:
-    st.header("Kalyx vous écoute")
-    
-    # API CONFIG
-    try:
-        api_key = st.secrets["GEMINI_API_KEY"]
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel("gemini-pro") # Modèle standard
-    except:
-        st.error("Erreur API : Vérifiez votre clé dans les secrets.")
-
-    # Affichage messages
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.markdown(msg["content"])
-    
-    # Input
-    if prompt := st.chat_input("Votre message..."):
-        if "boom" in prompt.lower():
-            st.session_state.bg_url = "https://www.public.fr/styles/desktop/public/2023-04/jul.jpg"
+# --- LAYOUT PRINCIPAL (HEADER + BODY) ---
+# En-tête avec bouton Upgrade
+col_h1, col_h2 = st.columns([3, 1])
+with col_h2:
+    if not st.session_state.is_pro:
+        if st.button("🚀 Mettre à niveau (9,99€)"):
+            st.session_state.is_pro = True
+            st.success("Passage en mode Pro activé !")
             st.rerun()
-        
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.markdown(prompt)
-        
-        try:
-            with st.chat_message("assistant"):
-                response = model.generate_content(prompt)
-                st.markdown(response.text)
-                st.session_state.messages.append({"role": "assistant", "content": response.text})
-        except Exception as e:
-            st.error("L'IA n'a pas pu répondre.")
+
+# Gestion Sidebar Droite
+if st.session_state.show_right_bar:
+    main_col, right_col = st.columns([0.8, 0.2])
+else:
+    main_col = st.container()
+    right_col = None
+
+# --- LOGIQUE PAGES ---
+with main_col:
+    # 1. CHAT
+    if st.session_state.page == "chat":
+        st.header("Kalyx vous écoute")
+        if not st.session_state.is_pro and st.session_state.chat_count >= 30:
+            st.error("Limite de 30 questions atteinte. Passez en mode Pro.")
+        else:
+            if prompt := st.chat_input("Votre message..."):
+                if "boom" in prompt.lower():
+                    st.session_state.bg_mode = "on"
+                st.session_state.chat_count += 1
+                st.write(f"Réponse simulée (IA) - Question n°{st.session_state.chat_count}")
+
+    # 2. IMAGE GEN
+    elif st.session_state.page == "image_gen":
+        st.header("Générateur d'images")
+        if not st.session_state.is_pro and st.session_state.img_count >= 5:
+            st.error("Limite de 5 images gratuite atteinte.")
+        else:
+            text = st.text_input("Description de l'image")
+            if st.button("Générer"):
+                st.session_state.img_count += 1
+                st.image("https://via.placeholder.com/300?text=Image+Generée")
+
+    # 3. ACTIVITÉ
+    elif st.session_state.page == "activity":
+        st.header("Rapports d'activité")
+        st.write(f"Questions posées : {st.session_state.chat_count}")
+        st.write(f"Images générées : {st.session_state.img_count}")
+
+    # 4. PARAMÈTRES
+    elif st.session_state.page == "settings":
+        st.header("Paramètres du compte")
+        st.write("Email: utilisateur@kalyx.com")
+        st.write(f"Statut: {'Pro' if st.session_state.is_pro else 'Basique'}")
 
 # --- SIDEBAR DROITE ---
-if col_right:
-    with col_right:
-        st.subheader("ℹ️ Infos")
+if right_col:
+    with right_col:
+        st.markdown("### ℹ️ Infos")
         st.write(f"Date : {datetime.now().strftime('%d/%m/%Y')}")
-        st.write("Status : Actif")
-        st.write("Discussions récentes :")
-        st.write("- Projet Python")
+        st.write("Discussions : En cours")
