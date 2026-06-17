@@ -1,11 +1,13 @@
 import streamlit as st
 import google.generativeai as genai
 from streamlit_webrtc import webrtc_streamer
+from streamlit_mic_recorder import mic_recorder
+from datetime import datetime
 
-# Configuration
-st.set_page_config(page_title="Kalyx", page_icon="🌴", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="Kalyx - Monia", page_icon="🌴", layout="wide")
 
-# Initialisation des états
+# --- INITIALISATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
 if "show_right_bar" not in st.session_state: st.session_state.show_right_bar = True
@@ -17,15 +19,15 @@ if not st.session_state.logged_in:
     email = st.text_input("Adresse Email")
     password = st.text_input("Mot de passe", type="password")
     if st.button("Se connecter"):
-        if email and password: # Ajoutez ici votre logique de validation réelle
+        if email and password:
             st.session_state.logged_in = True
             st.rerun()
         else:
-            st.error("Veuillez remplir tous les champs")
-    st.stop() # Arrête le script ici si non connecté
+            st.error("Veuillez remplir les champs.")
+    st.stop()
 
-# --- 2. INTERFACE PRINCIPALE (Si connecté) ---
-# Fond d'écran
+# --- 2. INTERFACE PRINCIPALE ---
+# CSS pour le fond d'écran
 bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1353&q=80"
 st.markdown(f"""
     <style>
@@ -33,7 +35,7 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# Barre Latérale
+# Barre Latérale Gauche
 with st.sidebar:
     st.title("Menu Kalyx")
     if st.button("➕ Nouvelle Discussion"):
@@ -41,54 +43,72 @@ with st.sidebar:
         st.rerun()
     st.button("🖼️ Générer Image")
     st.divider()
-    
-    # Toggle Visio
-    if st.button("🎥 Activer/Désactiver Visio"):
+    # Bouton Visio
+    if st.button("🎥 Lancer Visio avec Monia"):
         st.session_state.visio_mode = not st.session_state.visio_mode
         st.rerun()
-    
-    search = st.text_input("🔍 Recherche")
 
-# Mise en page
+# --- GESTION DES COLONNES (SÉCURISÉE) ---
+col_right = None 
 if st.session_state.show_right_bar:
     col_main, col_right = st.columns([3, 1])
 else:
     col_main = st.columns([1])[0]
 
+# --- CONTENU PRINCIPAL ---
 with col_main:
-    st.title("🤖 Kalyx")
-    
-    # Mode Visio (Accès Caméra)
+    # Mode Visio activé
     if st.session_state.visio_mode:
-        st.info("Mode Visio activé. Veuillez autoriser l'accès à votre caméra.")
+        st.warning("📞 En ligne avec Monia - Mode Visio Actif")
         webrtc_streamer(key="visio_camera")
-        st.write("Kalyx est en mode visio avec vous.")
+        st.write("Monia vous écoute en temps réel...")
+    else:
+        st.title("🤖 Monia est prête")
 
-    # Chat
+    # Configuration IA
     if "GEMINI_API_KEY" in st.secrets:
         genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel("gemini-1.5-flash")
     
+    # Affichage des messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    if user_input := st.chat_input("Posez votre question..."):
-        st.session_state.messages.append({"role": "user", "content": user_input})
+    # Entrée (Micro + Saisie)
+    c_mic, c_input = st.columns([0.1, 0.9])
+    with c_mic:
+        audio = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic')
+    with c_input:
+        user_input = st.chat_input("Posez votre question à Monia...")
+
+    # Traitement
+    final_input = audio["text"] if audio and "text" in audio else user_input
+    if final_input:
+        st.session_state.messages.append({"role": "user", "content": final_input})
         with st.chat_message("user"):
-            st.markdown(user_input)
+            st.markdown(final_input)
         
         with st.chat_message("assistant"):
-            response = model.generate_content(user_input)
+            # En mode visio, on force une réponse immédiate
+            response = model.generate_content(final_input)
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
 
-# Barre Droite
-with col_right:
-    if st.button("↔️ Informations"):
-        st.session_state.show_right_bar = not st.session_state.show_right_bar
+# --- BARRE D'INFORMATIONS (DROITE) ---
+if col_right:
+    with col_right:
+        if st.button("↔️ Fermer Infos"):
+            st.session_state.show_right_bar = False
+            st.rerun()
+        st.markdown("### 📅 Aujourd'hui")
+        st.write(f"**Date :** {datetime.now().strftime('%d/%m/%Y')}")
+        st.write(f"**Heure :** {datetime.now().strftime('%H:%M')}")
+        st.info("Système Kalyx opérationnel.")
+        st.write("• État : Connecté")
+        st.write("• Réseau : Stable")
+else:
+    # Si fermée, on affiche un petit bouton pour l'ouvrir
+    if st.button("↔️ Infos du Jour"):
+        st.session_state.show_right_bar = True
         st.rerun()
-    if st.session_state.show_right_bar:
-        st.markdown("### ℹ️ Informations")
-        st.write("• Système en ligne")
-        st.write("• Utilisateur connecté")
