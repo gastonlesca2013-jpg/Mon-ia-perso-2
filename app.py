@@ -2,100 +2,120 @@ import streamlit as st
 import google.generativeai as genai
 from datetime import datetime
 
-# Configuration
-st.set_page_config(page_title="Kalyx", page_icon="🌴", layout="wide")
+# Configuration de la page
+st.set_page_config(page_title="Kalyx", layout="wide")
 
 # --- INITIALISATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
 if "bg_mode" not in st.session_state: st.session_state.bg_mode = "tropical"
+if "current_view" not in st.session_state: st.session_state.current_view = "chat"
 
-# Liens images (Remplacez par vos propres liens permanents)
-LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" 
+# --- CSS POUR COUVRIR TOUT L'ÉCRAN ---
 BG_TROPICAL = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
-BG_JUL = "https://www.public.fr/styles/desktop/public/2023-04/jul.jpg"
-
-# --- STYLE CSS ---
+BG_JUL = "https://static.skyrock.fm/static/0.skyrock.fm/art/pic.99965315.2.jpg"
 current_bg = BG_TROPICAL if st.session_state.bg_mode == "tropical" else BG_JUL
 
 st.markdown(f"""
     <style>
-    .stApp {{ background: url("{current_bg}"); background-size: cover; background-attachment: fixed; }}
-    .breathing-circle {{ width: 6px; height: 6px; background-color: #00ffcc; border-radius: 50%; margin: 5px; animation: pulse 1.5s infinite; }}
-    @keyframes pulse {{ 0% {{ transform: scale(1); }} 50% {{ transform: scale(1.3); }} 100% {{ transform: scale(1); }} }}
+    /* Fond d'écran global */
+    .stApp {{
+        background: url("{current_bg}");
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        height: 100vh;
+    }}
+    /* Correction pour que la barre de tâche soit bien visible */
+    [data-testid="stSidebar"] {{ background-color: rgba(20, 20, 20, 0.8); }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- LOGIN (Sécurité) ---
+# --- PAGE DE CONNEXION ---
 if not st.session_state.logged_in:
-    st.image(LOGO_URL, width=100)
-    st.title("Connexion Kalyx")
-    email = st.text_input("Email")
-    pwd = st.text_input("Mot de passe", type="password")
+    st.title("Connexion à Kalyx")
+    user_email = st.text_input("Email")
     if st.button("Se connecter"):
-        if email and pwd: # Ajoutez ici votre logique de vérification
-            st.session_state.logged_in = True
-            st.rerun()
+        st.session_state.logged_in = True
+        st.rerun()
     st.stop()
 
-# --- SIDEBAR COMPLÈTE ---
+# --- SIDEBAR GAUCHE (Navigation) ---
 with st.sidebar:
-    st.image(LOGO_URL, width=40)
-    st.title("Kalyx")
+    # Logo + Nom
+    col1, col2 = st.columns([1, 3])
+    with col1:
+        st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=40)
+    with col2:
+        st.markdown("### Kalyx")
     
-    if st.button("➕ Nouvelle Discussion"):
+    st.divider()
+    if st.button("➕ Nouvelle Discussion", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
     
-    st.text_input("🔍 Rechercher...")
+    st.text_input("🔍 Rechercher")
     
-    st.subheader("Bibliothèque")
-    st.button("🖼️ Mes Images")
-    
-    st.subheader("Récent")
-    # Simulation d'historique
-    st.write("Dernière discussion...")
+    if st.button("🖼️ Mes Images", use_container_width=True):
+        st.session_state.current_view = "images"
     
     st.divider()
     st.subheader("Compte")
-    st.button("📊 Activité")
-    st.button("⚙️ Paramètres")
-    st.write("👤 Profil Utilisateur")
+    st.button("📊 Activité", use_container_width=True)
+    st.button("⚙️ Paramètres", use_container_width=True)
+    st.write("👤 Profil: Connecté")
 
-# --- CHAT ET LOGIQUE ---
-st.title("🤖 Monia IA")
+# --- LAYOUT PRINCIPAL (Chat + Barre Droite) ---
+col_main, col_right = st.columns([4, 1])
 
-# Configuration API
-try:
-    if "GEMINI_API_KEY" in st.secrets:
-        genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-        # Utilisation de gemini-1.5-flash (plus stable)
-        model = genai.GenerativeModel("gemini-1.5-flash")
-    else:
-        st.error("Clé API introuvable.")
-except Exception as e:
-    st.error(f"Erreur init API: {e}")
-
-# Affichage message
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-if prompt := st.chat_input("Votre message..."):
-    # Commande Boom
-    if "boom" in prompt.lower():
-        st.session_state.bg_mode = "jul" if st.session_state.bg_mode == "tropical" else "tropical"
-        st.rerun()
+with col_main:
+    st.header("Kalyx vous écoute")
     
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    with st.chat_message("assistant"):
-        st.markdown('<div class="breathing-circle"></div>', unsafe_allow_html=True)
-        try:
-            response = model.generate_content(prompt)
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
-        except Exception as e:
-            st.error("Erreur de connexion avec l'IA. Vérifiez votre modèle.")
+    # Logique de Chat
+    if st.session_state.current_view == "chat":
+        # API IA
+        api_key = st.secrets.get("GEMINI_API_KEY")
+        if api_key:
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        # Affichage messages
+        for msg in st.session_state.messages:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+        
+        if prompt := st.chat_input("Votre message..."):
+            # Commande Boom
+            if "boom" in prompt.lower():
+                st.session_state.bg_mode = "jul" if st.session_state.bg_mode == "tropical" else "tropical"
+                st.rerun()
+            
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            with st.chat_message("assistant"):
+                try:
+                    response = model.generate_content(prompt)
+                    st.markdown(response.text)
+                    st.session_state.messages.append({"role": "assistant", "content": response.text})
+                except Exception as e:
+                    st.error("Erreur de réponse de l'IA.")
+
+    # Logique Génération Image
+    elif st.session_state.current_view == "images":
+        st.subheader("Générateur d'images")
+        img_prompt = st.text_input("Que voulez-vous créer ?")
+        if st.button("Générer"):
+            st.info(f"Génération de : {img_prompt}...")
+            # Ici ajouter votre logique d'API d'image
+
+# --- SIDEBAR DROITE (Infos) ---
+with col_right:
+    st.markdown("### ℹ️ Infos")
+    st.write(f"Date: {datetime.now().strftime('%d/%m/%Y')}")
+    st.write("Status: Actif")
+    st.divider()
+    st.write("Discussions récentes:")
+    st.write("1. Projet Python")
+    st.write("2. Aide IA")
