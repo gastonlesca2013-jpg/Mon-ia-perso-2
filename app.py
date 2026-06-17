@@ -1,16 +1,24 @@
 import streamlit as st
 import google.generativeai as genai
-from datetime import datetime
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Kalyx", layout="wide")
+
+# CSS POUR FORCE LE TEXTE BLANC ET LE STYLE
+st.markdown("""
+    <style>
+    .stApp { color: white !important; }
+    div[data-testid="stMarkdownContainer"] p, h1, h2, h3, label { color: white !important; }
+    .stTextInput label { color: white !important; }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- INITIALISATION ---
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "page" not in st.session_state: st.session_state.page = "chat"
-if "all_chats" not in st.session_state: st.session_state.all_chats = {} # Stocke les messages par user
-if "bg_url" not in st.session_state: st.session_state.bg_url = "https://images.unsplash.com/photo-1507525428034-b723cf961d3e"
+# Historique global des logs (pour l'admin)
+if "user_logs" not in st.session_state: st.session_state.user_logs = []
 
 ADMIN_EMAIL = "gastonlesca2013@gmail.com"
 ADMIN_PWD = "Napoléon2013!"
@@ -20,6 +28,7 @@ if not st.session_state.logged_in:
     st.title("Connexion à Kalyx")
     email = st.text_input("Email")
     pwd = st.text_input("Mot de passe", type="password")
+    
     if st.button("Se connecter"):
         if email == ADMIN_EMAIL and pwd == ADMIN_PWD:
             st.session_state.logged_in = True
@@ -31,60 +40,63 @@ if not st.session_state.logged_in:
             st.rerun()
     st.stop()
 
-# --- CSS ET SIDEBAR ---
-st.markdown(f"<style>.stApp {{ background: url('{st.session_state.bg_url}'); background-size: cover; }}</style>", unsafe_allow_html=True)
-
+# --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("### 🤖 Kalyx")
-    if st.button("💬 Monia / Chat"): st.session_state.page = "chat"; st.rerun()
+    st.title("Kalyx")
+    if st.button("💬 Kalyx vous écoute"): st.session_state.page = "chat"; st.rerun()
     if st.button("🖼️ Générer Image"): st.session_state.page = "image"; st.rerun()
     if st.button("📊 Activité"): st.session_state.page = "activity"; st.rerun()
     if st.button("⚙️ Paramètres"): st.session_state.page = "settings"; st.rerun()
     
+    # Bouton Admin protégé
     if st.session_state.user_email == ADMIN_EMAIL:
         st.divider()
         if st.button("👑 Panneau Admin"): st.session_state.page = "admin"; st.rerun()
+    
+    st.divider()
+    if st.button("Déconnexion"): 
+        st.session_state.logged_in = False; st.rerun()
 
-# --- NAVIGATION ---
-# Page Chat
+# --- PAGES ---
 if st.session_state.page == "chat":
-    st.header("Discuter avec Monia")
-    if prompt := st.chat_input("Dites quelque chose..."):
-        # Enregistrement pour l'admin
-        if st.session_state.user_email not in st.session_state.all_chats:
-            st.session_state.all_chats[st.session_state.user_email] = []
-        st.session_state.all_chats[st.session_state.user_email].append(f"{st.session_state.user_email}: {prompt}")
+    st.header("Kalyx vous écoute")
+    
+    # Interface Chat
+    if prompt := st.chat_input("Votre message pour Kalyx..."):
+        # Enregistrer l'action pour l'admin
+        st.session_state.user_logs.append(f"{st.session_state.user_email} a demandé: {prompt}")
         
-        if "boom" in prompt.lower():
-            st.session_state.bg_url = "https://static.skyrock.fm/static/0.skyrock.fm/art/pic.99965315.2.jpg"
-            st.rerun()
-        st.success(f"Monia a reçu votre message : {prompt}")
+        st.chat_message("user").markdown(prompt)
+        
+        # Réponse IA
+        try:
+            # Assure-toi que la clé API est dans les Secrets Streamlit
+            model = genai.GenerativeModel("gemini-pro") 
+            response = model.generate_content(prompt)
+            st.chat_message("assistant").markdown(response.text)
+        except Exception as e:
+            st.error("Erreur de connexion à l'IA. Vérifiez votre clé API.")
 
-# Page Image
-elif st.session_state.page == "image":
-    st.header("Générateur d'images")
-    if st.text_input("Que voulez-vous générer ?"):
-        if st.button("Valider"):
-            st.image("https://via.placeholder.com/400?text=Votre+Image+Generee")
+elif st.session_state.page == "admin" and st.session_state.user_email == ADMIN_EMAIL:
+    st.header("👑 Panneau Admin")
+    st.info("Interface de supervision")
+    
+    # 1. Voir qui est connecté et ce qu'ils font
+    st.subheader("Journal d'activité des utilisateurs")
+    if not st.session_state.user_logs:
+        st.write("Aucune activité pour le moment.")
+    else:
+        for log in st.session_state.user_logs:
+            st.text(f"• {log}")
 
-# Page Activité
 elif st.session_state.page == "activity":
     st.header("📊 Activité")
-    st.write(f"Nombre d'utilisateurs connectés : 1") # Simulation
-    st.info("Tout fonctionne normalement.")
+    st.write(f"Utilisateur actuel : {st.session_state.user_email}")
+    st.write("Tout fonctionne normalement.")
 
-# Page Paramètres
 elif st.session_state.page == "settings":
-    st.header("⚙️ Paramètres du compte")
-    st.write(f"Email : {st.session_state.user_email}")
-    if st.button("Déconnexion"):
-        st.session_state.logged_in = False
-        st.rerun()
+    st.header("⚙️ Paramètres")
+    st.write(f"Connecté avec : {st.session_state.user_email}")
 
-# Page Admin
-elif st.session_state.page == "admin" and st.session_state.user_email == ADMIN_EMAIL:
-    st.header("👑 Panneau Administration")
-    st.write("--- Historique des discussions (Ce que les gens disent à Monia) ---")
-    for user, msgs in st.session_state.all_chats.items():
-        st.write(f"**{user} :**")
-        for m in msgs: st.text(m)
+else:
+    st.write("Bienvenue sur Kalyx.")
