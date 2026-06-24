@@ -1,38 +1,36 @@
 import streamlit as st
 import google.generativeai as genai
-import json
-import os
 
 # Configuration de la page
-st.set_page_config(page_title="Kalyx", layout="wide")
+st.set_page_config(page_title="Gropi AI", page_icon="🧠")
+st.title("🧠 Gropi AI")
 
-# Vérification de sécurité pour les Secrets
-if "GEMINI_API_KEY" not in st.secrets:
-    st.error("Erreur : La clé GEMINI_API_KEY n'est pas configurée dans les Settings Streamlit.")
-    st.stop()
+# Configuration de l'API (Remplace par ta vraie clé)
+# Dans un projet réel, utilise st.secrets pour la sécurité !
+genai.configure(api_key="TA_CLE_API_ICI")
 
-# Configuration IA
-genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+# Initialisation du modèle
+model = genai.GenerativeModel('gemini-pro')
 
-def get_model():
-    # On utilise un modèle standard
-    return genai.GenerativeModel('gemini-1.5-flash')
+# Gestion de l'historique de chat
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# --- RESTE DU CODE (Exemple structure) ---
-st.title("Kalyx")
+# Affichage des messages passés
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
 
-# Gestion de l'affichage image (Correction de l'erreur MediaFileStorage)
-data = {"img_url": ""} # Simulation de tes données
-if data.get("img_url") and data["img_url"].startswith("http"):
-    st.image(data["img_url"])
-else:
-    st.info("Aucune image à afficher.")
+# Zone de saisie
+if prompt := st.chat_input("Pose ta question à Gropi..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    with st.chat_message("user"):
+        st.markdown(prompt)
 
-# Chat
-if prompt := st.chat_input("Discuter avec Monia"):
-    try:
-        model = get_model()
+    # Réponse de l'IA
+    with st.chat_message("assistant"):
         response = model.generate_content(prompt)
-        st.write(response.text)
-    except Exception as e:
-        st.error(f"Erreur IA : {e}")
+        full_response = response.text
+        st.markdown(full_response)
+    
+    st.session_state.messages.append({"role": "assistant", "content": full_response})
